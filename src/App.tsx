@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTheme } from './style-zx'
+import { Button } from './components/Button'
 
 function App() {
   const [count, setCount] = useState(0)
@@ -10,11 +11,11 @@ function App() {
       bg: '$theme.colors.background',
       color: '$theme.colors.text',
       display: 'flex',
-      height: '100%',
       width: '100%',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
+      minHeight: '100vh',
       fontFamily: 'Inter, system-ui, Avenir, Helvetica, Arial, sans-serif'
     }}>
       <h1 zx={{
@@ -40,27 +41,16 @@ function App() {
           Zero-runtime CSS-in-JS with <code>zx</code> prop.
         </p>
 
-        <button
+        <Button
           onClick={() => setCount((count) => count + 1)}
+          variant="secondary"
           zx={{
-            bg: '$theme.colors.primary',
-            color: 'white',
-            border: 'none',
-            p: '10px 20px',
-            borderRadius: 8,
-            fontSize: 16,
-            cursor: 'pointer',
-            transition: 'background 0.3s',
-            '&:hover': {
-              bg: '$theme.colors.secondary'
-            },
-            '&:active': {
-              transform: 'scale(0.98)'
-            }
+            width: '100%',
+            mt: 10
           }}
         >
           count is {count}
-        </button>
+        </Button>
 
         <div zx={{ mt: 20, p: 10, border: '1px solid #eee', borderRadius: 4 }}>
           <p zx={{ m: 0, fontSize: 14, color: '#888' }}>

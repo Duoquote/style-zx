@@ -7,7 +7,7 @@ import { createTheme } from './style-zx'
 createTheme({
   colors: {
     primary: '#646cff',
-    secondary: '#535bf2',
+    secondary: '#40db55ff',
     background: '#ffffff',
     text: '#213547',
     surface: '#f9f9f9',
