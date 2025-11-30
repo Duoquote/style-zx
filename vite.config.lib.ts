@@ -20,7 +20,7 @@ export default defineConfig({
             formats: ['es', 'cjs'],
         },
         rollupOptions: {
-            external: ['react', 'react-dom', 'vite', 'magic-string'],
+            external: ['react', 'react-dom', 'vite', 'magic-string', '@babel/parser', '@babel/traverse', '@babel/types', 'crypto'],
             output: {
                 globals: {
                     react: 'React',

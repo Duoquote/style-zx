@@ -7,6 +7,7 @@
 ## Features
 
 -   **Zero Runtime**: Styles are extracted to static CSS files during the build process. No runtime style injection or overhead.
+-   **Ultra Lightweight**: The plugin output is tiny (~5KB), ensuring minimal impact on your build process.
 -   **`zx` Prop**: Style any component directly with the `zx` prop (inspired by MUI's `sx` and other similar libraries).
 -   **TypeScript Support**: Full type safety for CSS properties and theme variables.
 -   **Theming**: Define a theme and access variables easily (e.g., `"$theme.colors.primary"`).
@@ -142,5 +143,6 @@ Both libraries aim for zero-runtime CSS-in-JS.
 ## Gains
 
 -   **Performance**: Zero JS runtime for styles means faster TTI (Time to Interactive) and less main-thread work.
+-   **Bundle Size**: The plugin itself is extremely small (~5KB), keeping your dev dependencies lean.
 -   **Developer Experience**: Write styles in TypeScript right next to your components. Get autocomplete and type checking.
 -   **Maintainability**: Styles are scoped and colocated, reducing dead code and global namespace pollution.
