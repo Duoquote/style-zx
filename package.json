@@ -1,13 +1,34 @@
 {
   "name": "style-zx",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.0.1",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js",
+      "require": "./dist/plugin.cjs"
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build -c vite.config.lib.ts",
+    "build:example": "vite build --outDir dist-example",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --outDir dist-example",
+    "prepreview": "npm run build:example",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -30,6 +51,7 @@
     "magic-string": "^0.30.21",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4"
   }
 }

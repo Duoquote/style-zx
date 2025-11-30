@@ -13,19 +13,29 @@ function hash(str: string) {
 function evaluateAstNode(node: t.Node): any {
     if (t.isStringLiteral(node)) return node.value;
     if (t.isNumericLiteral(node)) return node.value;
+    if (t.isBooleanLiteral(node)) return node.value;
+    if (t.isNullLiteral(node)) return null;
+    if (t.isUnaryExpression(node) && node.operator === '-' && t.isNumericLiteral(node.argument)) {
+        return -node.argument.value;
+    }
+
     if (t.isObjectExpression(node)) {
         const obj: any = {};
         node.properties.forEach(prop => {
             if (t.isObjectProperty(prop)) {
                 const key = t.isIdentifier(prop.key) ? prop.key.name : t.isStringLiteral(prop.key) ? prop.key.value : null;
-                if (key) {
-                    obj[key] = evaluateAstNode(prop.value);
+                if (!key) {
+                    throw new Error(`Unsupported key type in zx prop: ${prop.key.type}`);
                 }
+                obj[key] = evaluateAstNode(prop.value);
+            } else {
+                throw new Error(`Unsupported property type in zx prop: ${prop.type}. Only static object properties are allowed.`);
             }
         });
         return obj;
     }
-    return null;
+
+    throw new Error(`Dynamic expressions are not allowed in zx prop. Found: ${node.type}. Use 'style' prop for dynamic values.`);
 }
 
 function processFile(code: string, id: string): { css: string, code: string, map: any, hasZx: boolean } | null {
@@ -55,33 +65,13 @@ function processFile(code: string, id: string): { css: string, code: string, map
                 hasZx = true;
 
                 if (t.isJSXExpressionContainer(zxAttr.value) && t.isObjectExpression(zxAttr.value.expression)) {
-                    const styleObj: any = {};
+                    let styleObj: any = {};
 
-                    zxAttr.value.expression.properties.forEach((prop) => {
-                        if (t.isObjectProperty(prop)) {
-                            let key: string;
-                            if (t.isIdentifier(prop.key)) {
-                                key = prop.key.name;
-                            } else if (t.isStringLiteral(prop.key)) {
-                                key = prop.key.value;
-                            } else {
-                                return;
-                            }
-
-                            let value: any;
-                            if (t.isStringLiteral(prop.value)) {
-                                value = prop.value.value;
-                            } else if (t.isNumericLiteral(prop.value)) {
-                                value = prop.value.value;
-                            } else if (t.isObjectExpression(prop.value)) {
-                                value = evaluateAstNode(prop.value);
-                            } else {
-                                return;
-                            }
-
-                            styleObj[key] = value;
-                        }
-                    });
+                    try {
+                        styleObj = evaluateAstNode(zxAttr.value.expression);
+                    } catch (e: any) {
+                        throw new Error(`Error parsing zx prop in ${id}: ${e.message}`);
+                    }
 
                     const className = `zx-${hash(JSON.stringify(styleObj))}`;
                     const css = compileStyle(styleObj, className);
@@ -91,7 +81,7 @@ function processFile(code: string, id: string): { css: string, code: string, map
                         (attr: any) => t.isJSXAttribute(attr) && attr.name.name === 'className'
                     ) as t.JSXAttribute;
 
-                    if (zxAttr.start !== undefined && zxAttr.end !== undefined) {
+                    if (zxAttr.start != null && zxAttr.end != null) {
                         s.remove(zxAttr.start, zxAttr.end);
                     }
 

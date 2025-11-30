@@ -1,27 +1,9 @@
 import { useState, useEffect } from 'react';
 
 // Simple deep merge for theme objects
-function isObject(item: any) {
-  return (item && typeof item === 'object' && !Array.isArray(item));
-}
 
-function mergeDeep(target: any, ...sources: any[]): any {
-  if (!sources.length) return target;
-  const source = sources.shift();
 
-  if (isObject(target) && isObject(source)) {
-    for (const key in source) {
-      if (isObject(source[key])) {
-        if (!target[key]) Object.assign(target, { [key]: {} });
-        mergeDeep(target[key], source[key]);
-      } else {
-        Object.assign(target, { [key]: source[key] });
-      }
-    }
-  }
 
-  return mergeDeep(target, ...sources);
-}
 
 // Flatten theme object to CSS variables
 // e.g. { colors: { primary: 'red' } } -> { '--theme-colors-primary': 'red' }
@@ -49,11 +31,11 @@ const listeners = new Set<(theme: any) => void>();
 
 export function createTheme<T extends object>(themeConfig: T) {
   currentTheme = themeConfig;
-  
+
   // Generate CSS variables
   const cssVars = flattenTheme(themeConfig);
   let styleEl = document.getElementById('style-zx-theme');
-  
+
   if (!styleEl) {
     styleEl = document.createElement('style');
     styleEl.id = 'style-zx-theme';

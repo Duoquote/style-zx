@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 export { createTheme, useTheme } from './theme';
 
 // Type definitions for zx prop

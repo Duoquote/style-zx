@@ -43,10 +43,10 @@ function App() {
 
         <Button
           onClick={() => setCount((count) => count + 1)}
-          variant="secondary"
           zx={{
             width: '100%',
-            mt: 10
+            mt: 10,
+            bg: "$theme.colors.primary",
           }}
         >
           count is {count}
@@ -83,6 +83,9 @@ function App() {
           <h3 zx={{ m: 0, color: 'green' }}>Hover Me</h3>
           <p zx={{ m: 0, mt: 10 }}>This box has a hover effect defined in `zx`.</p>
         </div>
+      </div>
+      <div zx={{ mt: 40, mb: 40, fontSize: 12, color: '#666' }}>
+        Theme: <pre>{JSON.stringify(theme, null, 2)}</pre>
       </div>
     </div>
   )

@@ -1,12 +1,10 @@
-import { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary';
 }
 
-export function Button({ className, variant = 'primary', children, ...props }: ButtonProps) {
-    const isPrimary = variant === 'primary';
-
+export function Button({ className, children, ...props }: ButtonProps) {
     return (
         <button
             {...props}
@@ -20,7 +18,6 @@ export function Button({ className, variant = 'primary', children, ...props }: B
                 fontWeight: 600,
                 p: '10px 20px',
                 transition: 'all 0.2s ease',
-                bg: isPrimary ? '$theme.colors.primary' : '$theme.colors.secondary',
                 color: 'white',
                 '&:hover': {
                     opacity: 0.9,
