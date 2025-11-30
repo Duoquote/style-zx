@@ -1,0 +1,9 @@
+{
+    "extends": "./tsconfig.app.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "allowImportingTsExtensions": false,
+        "declaration": true,
+        "emitDeclarationOnly": true
+    }
+}

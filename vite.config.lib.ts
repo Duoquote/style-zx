@@ -9,6 +9,7 @@ export default defineConfig({
         dts({
             include: ['src/style-zx', 'src/vite-plugin-style-zx'],
             insertTypesEntry: true,
+            tsconfigPath: './tsconfig.build.json',
         }),
     ],
     build: {
