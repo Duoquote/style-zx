@@ -12,6 +12,15 @@
     "url": "https://github.com/Duoquote/style-zx/issues"
   },
   "homepage": "https://github.com/Duoquote/style-zx#readme",
+  "keywords": [
+    "css-in-js",
+    "react",
+    "zero-runtime",
+    "styling",
+    "css",
+    "typescript",
+    "zx"
+  ],
   "files": [
     "dist"
   ],
