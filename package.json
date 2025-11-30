@@ -2,6 +2,7 @@
   "name": "style-zx",
   "private": false,
   "version": "0.0.3",
+  "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
