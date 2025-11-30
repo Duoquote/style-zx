@@ -3,6 +3,14 @@
   "private": false,
   "version": "0.0.2",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Duoquote/style-zx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Duoquote/style-zx/issues"
+  },
+  "homepage": "https://github.com/Duoquote/style-zx#readme",
   "files": [
     "dist"
   ],
