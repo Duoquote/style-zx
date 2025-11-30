@@ -1,4 +1,4 @@
-import type { Plugin, HmrContext } from 'vite';
+import type { Plugin, HmrContext, ResolvedConfig } from 'vite';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as t from '@babel/types';
@@ -38,17 +38,8 @@ function evaluateAstNode(node: t.Node): any {
     throw new Error(`Dynamic expressions are not allowed in zx prop. Found: ${node.type}. Use 'style' prop for dynamic values.`);
 }
 
-// Global registry
-const styleMap = new Map<string, string>(); // hash -> css
-const fileStyleUsage = new Map<string, Set<string>>(); // fileId -> Set<hash>
-
-function processFile(code: string, id: string): { code: string, map: any, hasZx: boolean } | null {
+function processFile(code: string, id: string, shouldInjectCss: boolean): { css: string, code: string, map: any, hasZx: boolean } | null {
     if (!code.includes('zx={')) {
-        // If the file no longer has zx, we should clear its usage
-        if (fileStyleUsage.has(id)) {
-            fileStyleUsage.delete(id);
-            return { code, map: null, hasZx: false }; // Return hasZx: false to trigger updates if needed
-        }
         return null;
     }
 
@@ -59,7 +50,7 @@ function processFile(code: string, id: string): { code: string, map: any, hasZx:
 
     const s = new MagicString(code);
     let hasZx = false;
-    const usedHashes = new Set<string>();
+    let generatedCss = '';
 
     // Handle Babel interop
     const _traverse = (traverse as any).default || traverse;
@@ -82,15 +73,9 @@ function processFile(code: string, id: string): { code: string, map: any, hasZx:
                         throw new Error(`Error parsing zx prop in ${id}: ${e.message}`);
                     }
 
-                    const styleHash = hash(JSON.stringify(styleObj));
-                    const className = `zx-${styleHash}`;
-
-                    // Add to global registry if not exists
-                    if (!styleMap.has(styleHash)) {
-                        const css = compileStyle(styleObj, className);
-                        styleMap.set(styleHash, css);
-                    }
-                    usedHashes.add(styleHash);
+                    const className = `zx-${hash(JSON.stringify(styleObj))}`;
+                    const css = compileStyle(styleObj, className);
+                    generatedCss += css + '\n';
 
                     const classAttr = path.node.attributes.find(
                         (attr: any) => t.isJSXAttribute(attr) && attr.name.name === 'className'
@@ -115,92 +100,121 @@ function processFile(code: string, id: string): { code: string, map: any, hasZx:
         }
     });
 
-    // Update usage for this file
     if (hasZx) {
-        fileStyleUsage.set(id, usedHashes);
-        s.prepend(`import 'virtual:style-zx.css';\n`);
+        if (shouldInjectCss) {
+            s.prepend(`import '${id}.style-zx.css';\n`);
+        }
         return {
             code: s.toString(),
             map: s.generateMap({ hires: true }),
+            css: generatedCss,
             hasZx: true
         };
-    } else {
-        fileStyleUsage.delete(id);
     }
 
     return null;
 }
 
-export default function styleZx(): Plugin {
-    const virtualModuleId = 'virtual:style-zx.css';
-    const resolvedVirtualModuleId = '\0' + virtualModuleId;
+export default function styleZx(): Plugin[] {
+    const cssMap = new Map<string, string>();
+    let config: ResolvedConfig;
+    const globalCss = new Set<string>();
 
-    return {
-        name: 'vite-plugin-style-zx',
-        enforce: 'pre',
+    return [
+        {
+            name: 'vite-plugin-style-zx',
+            enforce: 'pre',
 
-        resolveId(id) {
-            if (id === virtualModuleId) {
-                return resolvedVirtualModuleId;
-            }
-            return null;
-        },
+            configResolved(resolvedConfig) {
+                config = resolvedConfig;
+            },
 
-        load(id) {
-            if (id === resolvedVirtualModuleId) {
-                // Rebuild CSS from all used styles
-                // We could optimize this by ref-counting, but for now iterating unique hashes is fine
-                const allUsedHashes = new Set<string>();
-                for (const hashes of fileStyleUsage.values()) {
-                    hashes.forEach(h => allUsedHashes.add(h));
+            resolveId(source) {
+                if (source.endsWith('.style-zx.css')) {
+                    return source;
+                }
+                return null;
+            },
+
+            load(id) {
+                if (id.endsWith('.style-zx.css')) {
+                    const originalFile = id.replace('.style-zx.css', '');
+                    return cssMap.get(originalFile) || '';
+                }
+                return null;
+            },
+
+            transform(code, id) {
+                if (!/\.(t|j)sx?$/.test(id)) {
+                    return null;
                 }
 
-                let css = '';
-                allUsedHashes.forEach(h => {
-                    if (styleMap.has(h)) {
-                        css += styleMap.get(h) + '\n';
+                const shouldInjectCss = config.command === 'serve';
+                const result = processFile(code, id, shouldInjectCss);
+                if (result && result.hasZx) {
+                    cssMap.set(id, result.css);
+                    if (config.command === 'build') {
+                        globalCss.add(result.css);
                     }
-                });
-                return css;
-            }
-            return null;
-        },
-
-        transform(code, id) {
-            if (!/\.(t|j)sx?$/.test(id)) {
+                    return {
+                        code: result.code,
+                        map: result.map,
+                    };
+                }
                 return null;
-            }
+            },
 
-            const result = processFile(code, id);
-            if (result && result.hasZx) {
-                return {
-                    code: result.code,
-                    map: result.map,
-                };
+            async handleHotUpdate({ file, modules, read, server }: HmrContext) {
+                if (!/\.(t|j)sx?$/.test(file)) {
+                    return;
+                }
+
+                const code = await read();
+                const result = processFile(code, file, true);
+
+                if (result && result.hasZx) {
+                    cssMap.set(file, result.css);
+
+                    // Find the virtual CSS module and invalidate it
+                    const virtualId = `${file}.style-zx.css`;
+                    const cssModule = server.moduleGraph.getModuleById(virtualId);
+
+                    if (cssModule) {
+                        // Return both the original module(s) and the CSS module
+                        // This tells Vite that the CSS module has also changed
+                        return [...modules, cssModule];
+                    }
+                }
             }
-            return null;
         },
+        {
+            name: 'vite-plugin-style-zx-post',
+            enforce: 'post',
+            generateBundle(_options, bundle) {
+                if (config.command === 'build' && globalCss.size > 0) {
+                    const refId = this.emitFile({
+                        type: 'asset',
+                        name: 'style-zx.css',
+                        source: Array.from(globalCss).join('\n')
+                    });
 
-        async handleHotUpdate({ file, modules, read, server }: HmrContext) {
-            if (!/\.(t|j)sx?$/.test(file)) {
-                return;
-            }
+                    const fileName = this.getFileName(refId);
 
-            const code = await read();
-            processFile(code, file);
-
-            // Regardless of whether result hasZx, we might need to update the CSS
-            // because styles might have been removed.
-
-            const mod = server.moduleGraph.getModuleById(resolvedVirtualModuleId);
-            if (mod) {
-                // Invalidate the virtual module so it reloads
-                server.moduleGraph.invalidateModule(mod);
-
-                // If the file itself changed, we return its modules + the virtual CSS module
-                // This ensures the browser reloads the CSS
-                return [...modules, mod];
+                    // Inject into index.html if it exists in the bundle
+                    for (const file of Object.values(bundle)) {
+                        if (file.type === 'asset' && file.fileName.endsWith('.html')) {
+                            const source = file.source as string;
+                            // Simple injection before </head>
+                            if (source.includes('</head>')) {
+                                file.source = source.replace(
+                                    '</head>',
+                                    `<link rel="stylesheet" href="/${fileName}">\n</head>`
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
-    };
+    ];
 }
