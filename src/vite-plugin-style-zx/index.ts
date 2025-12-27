@@ -199,16 +199,15 @@ export default function styleZx(): Plugin[] {
                     });
 
                     const fileName = this.getFileName(refId);
+                    const base = config.base || '/';
 
-                    // Inject into index.html if it exists in the bundle
                     for (const file of Object.values(bundle)) {
                         if (file.type === 'asset' && file.fileName.endsWith('.html')) {
                             const source = file.source as string;
-                            // Simple injection before </head>
                             if (source.includes('</head>')) {
                                 file.source = source.replace(
                                     '</head>',
-                                    `<link rel="stylesheet" href="/${fileName}">\n</head>`
+                                    `<link rel="stylesheet" href="${base}${fileName}">\n</head>`
                                 );
                             }
                         }
