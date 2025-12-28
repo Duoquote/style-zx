@@ -38,7 +38,7 @@ function evaluateAstNode(node: t.Node): any {
     throw new Error(`Dynamic expressions are not allowed in zx prop. Found: ${node.type}. Use 'style' prop for dynamic values.`);
 }
 
-function processFile(code: string, id: string, shouldInjectCss: boolean): { css: string, code: string, map: any, hasZx: boolean } | null {
+function processFile(code: string, id: string, shouldInjectCss: boolean): { css: string, cssRules: Map<string, string>, code: string, map: any, hasZx: boolean } | null {
     if (!code.includes('zx={')) {
         return null;
     }
@@ -51,6 +51,7 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
     const s = new MagicString(code);
     let hasZx = false;
     let generatedCss = '';
+    const cssRules = new Map<string, string>();
 
     // Handle Babel interop
     const _traverse = (traverse as any).default || traverse;
@@ -76,6 +77,7 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
                     const className = `zx-${hash(JSON.stringify(styleObj))}`;
                     const css = compileStyle(styleObj, className);
                     generatedCss += css + '\n';
+                    cssRules.set(className, css);
 
                     const classAttr = path.node.attributes.find(
                         (attr: any) => t.isJSXAttribute(attr) && attr.name.name === 'className'
@@ -108,6 +110,7 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
             code: s.toString(),
             map: s.generateMap({ hires: true }),
             css: generatedCss,
+            cssRules,
             hasZx: true
         };
     }
@@ -118,7 +121,8 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
 export default function styleZx(): Plugin[] {
     const cssMap = new Map<string, string>();
     let config: ResolvedConfig;
-    const globalCss = new Set<string>();
+    // Map of className -> CSS rule for dead code elimination
+    const cssRulesMap = new Map<string, string>();
 
     return [
         {
@@ -154,7 +158,10 @@ export default function styleZx(): Plugin[] {
                 if (result && result.hasZx) {
                     cssMap.set(id, result.css);
                     if (config.command === 'build') {
-                        globalCss.add(result.css);
+                        // Store each CSS rule by its class name for later filtering
+                        for (const [className, cssRule] of result.cssRules) {
+                            cssRulesMap.set(className, cssRule);
+                        }
                     }
                     return {
                         code: result.code,
@@ -191,11 +198,32 @@ export default function styleZx(): Plugin[] {
             name: 'vite-plugin-style-zx-post',
             enforce: 'post',
             generateBundle(_options, bundle) {
-                if (config.command === 'build' && globalCss.size > 0) {
+                if (config.command === 'build' && cssRulesMap.size > 0) {
+                    // Collect all JS chunk contents to scan for used classes
+                    let allJsContent = '';
+                    for (const file of Object.values(bundle)) {
+                        if (file.type === 'chunk') {
+                            allJsContent += file.code;
+                        }
+                    }
+
+                    // Filter CSS rules to only include classes that appear in the final bundle
+                    const usedCssRules: string[] = [];
+                    for (const [className, cssRule] of cssRulesMap) {
+                        // Check if the class name appears in any JS chunk
+                        if (allJsContent.includes(className)) {
+                            usedCssRules.push(cssRule);
+                        }
+                    }
+
+                    if (usedCssRules.length === 0) {
+                        return; // No CSS to emit
+                    }
+
                     const refId = this.emitFile({
                         type: 'asset',
                         name: 'style-zx.css',
-                        source: Array.from(globalCss).join('\n')
+                        source: usedCssRules.join('\n')
                     });
 
                     const fileName = this.getFileName(refId);
