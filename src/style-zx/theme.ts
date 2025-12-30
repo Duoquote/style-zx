@@ -1,13 +1,6 @@
-import { useState, useEffect } from 'react';
-
-// Simple deep merge for theme objects
-
-
-
-
 // Flatten theme object to CSS variables
 // e.g. { colors: { primary: 'red' } } -> { '--theme-colors-primary': 'red' }
-function flattenTheme(theme: any, prefix = '--theme'): Record<string, string> {
+export function flattenTheme(theme: object, prefix = '--theme'): Record<string, string> {
   const result: Record<string, string> = {};
 
   function recurse(obj: any, currentKey: string) {
@@ -17,7 +10,7 @@ function flattenTheme(theme: any, prefix = '--theme'): Record<string, string> {
       if (typeof value === 'object' && value !== null) {
         recurse(value, newKey);
       } else {
-        result[`${prefix}-${newKey}`] = value;
+        result[`${prefix}-${newKey}`] = String(value);
       }
     }
   }
@@ -26,11 +19,34 @@ function flattenTheme(theme: any, prefix = '--theme'): Record<string, string> {
   return result;
 }
 
-let currentTheme: any = {};
-const listeners = new Set<(theme: any) => void>();
+// Store global theme for inheritance in ThemeProvider
+let globalTheme: object = {};
 
-export function createTheme<T extends object>(themeConfig: T) {
-  currentTheme = themeConfig;
+/**
+ * Get the current global theme object.
+ * Used internally by ThemeProvider for inheritance.
+ */
+export function getGlobalTheme<T extends object = object>(): T {
+  return globalTheme as T;
+}
+
+/**
+ * Creates a global theme by injecting CSS variables into :root.
+ * Returns the theme object for direct JS access.
+ * 
+ * @example
+ * ```ts
+ * export const theme = createTheme({
+ *   colors: { primary: '#F43F5E' }
+ * });
+ * 
+ * // Use in zx prop: $theme.colors.primary
+ * // Use in JS: theme.colors.primary
+ * ```
+ */
+export function createTheme<T extends object>(themeConfig: T): T {
+  // Store for inheritance
+  globalTheme = themeConfig;
 
   // Generate CSS variables
   const cssVars = flattenTheme(themeConfig);
@@ -50,22 +66,6 @@ export function createTheme<T extends object>(themeConfig: T) {
 
   styleEl.textContent = cssString;
 
-  // Notify listeners
-  listeners.forEach(listener => listener(currentTheme));
-
-  return currentTheme as T;
+  return themeConfig;
 }
 
-export function useTheme<T = any>(): T {
-  const [theme, setTheme] = useState<T>(currentTheme);
-
-  useEffect(() => {
-    const listener = (newTheme: any) => setTheme(newTheme);
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
-
-  return theme;
-}

@@ -1,6 +1,21 @@
 import { useState } from 'react'
-import { useTheme, createStyles } from './style-zx'
+import { createStyles, ThemeProvider, useTheme } from './style-zx'
 import { Button } from './components/Button'
+import { theme } from './theme'
+
+// Demo component that uses useTheme inside a ThemeProvider
+function ScopedThemeDemo() {
+  const scopedTheme = useTheme();
+  return (
+    <div zx={{ p: 20, bg: '$theme.colors.surface', borderRadius: 8, flex: 1 }}>
+      <h3 zx={{ m: 0, color: '$theme.colors.primary' }}>Scoped Theme (useTheme)</h3>
+      <p zx={{ m: 0, mt: 10, color: '$theme.colors.text' }}>Uses overridden colors from ThemeProvider.</p>
+      <pre zx={{ mt: 10, fontSize: 11, color: '$theme.colors.text', opacity: 0.7 }}>
+        {JSON.stringify(scopedTheme, null, 2)}
+      </pre>
+    </div>
+  );
+}
 
 // Test createStyles - these get compiled at build time
 const styles = createStyles({
@@ -24,7 +39,6 @@ const styles = createStyles({
 
 function App() {
   const [count, setCount] = useState(0)
-  const theme = useTheme()
 
   return (
     <div zx={{
@@ -112,8 +126,26 @@ function App() {
           </p>
         </div>
       </div>
-      <div zx={{ mt: 40, mb: 40, fontSize: 12, color: '#666' }}>
-        Theme: <pre>{JSON.stringify(theme, null, 2)}</pre>
+
+      {/* Demo: ThemeProvider for scoped themes */}
+      <div zx={{ mt: 40, mb: 40, display: 'flex', gap: 20 }}>
+        <div zx={{ p: 20, bg: '$theme.colors.surface', borderRadius: 8, flex: 1 }}>
+          <h3 zx={{ m: 0, color: '$theme.colors.primary' }}>Global Theme</h3>
+          <p zx={{ m: 0, mt: 10, color: '$theme.colors.text' }}>Uses colors from the global theme.</p>
+          <pre zx={{ mt: 10, fontSize: 11, color: '$theme.colors.text', opacity: 0.7 }}>
+            {JSON.stringify(theme, null, 2)}
+          </pre>
+        </div>
+
+        <ThemeProvider theme={{
+          colors: {
+            primary: '#a855f7',
+            text: 'rgba(255, 255, 255, 0.9)',
+            surface: '#1e1e2e',
+          }
+        }}>
+          <ScopedThemeDemo />
+        </ThemeProvider>
       </div>
     </div>
   )

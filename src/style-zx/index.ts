@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-export { createTheme, useTheme } from './theme';
+export { createTheme, flattenTheme } from './theme';
+export { ThemeProvider, useTheme } from './ThemeProvider';
 
 // Type definitions for zx prop
 export interface ZxStyle extends CSSProperties {
