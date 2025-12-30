@@ -1,6 +1,26 @@
 import { useState } from 'react'
-import { useTheme } from './style-zx'
+import { useTheme, createStyles } from './style-zx'
 import { Button } from './components/Button'
+
+// Test createStyles - these get compiled at build time
+const styles = createStyles({
+  demoCard: {
+    bg: '#f0f4ff',
+    p: 20,
+    borderRadius: 8,
+    border: '2px solid #4f46e5',
+  },
+  demoTitle: {
+    m: 0,
+    color: '#4f46e5',
+    fontSize: '1.2em',
+  },
+  demoText: {
+    m: 0,
+    mt: 10,
+    color: '#666',
+  },
+});
 
 function App() {
   const [count, setCount] = useState(0)
@@ -82,6 +102,14 @@ function App() {
         }}>
           <h3 zx={{ m: 0, color: 'green' }}>Hover Me</h3>
           <p zx={{ m: 0, mt: 10 }}>This box has a hover effect defined in `zx`.</p>
+        </div>
+
+        {/* Demo: createStyles usage */}
+        <div className={styles.demoCard}>
+          <h3 className={styles.demoTitle}>createStyles Demo</h3>
+          <p className={styles.demoText}>
+            This box uses <code>createStyles</code> for reusable static styles.
+          </p>
         </div>
       </div>
       <div zx={{ mt: 40, mb: 40, fontSize: 12, color: '#666' }}>

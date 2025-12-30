@@ -31,3 +31,33 @@ declare module 'react' {
         zx?: ZxStyle;
     }
 }
+
+/**
+ * Create static styles that are compiled at build time.
+ * The returned object maps style names to generated class names.
+ * 
+ * @example
+ * ```tsx
+ * const styles = createStyles({
+ *   container: { bg: '$theme.colors.background', p: 20 },
+ *   title: { fontSize: '2em', color: '$theme.colors.primary' },
+ * });
+ * 
+ * <div className={styles.container}>
+ *   <h1 className={styles.title}>Hello</h1>
+ * </div>
+ * ```
+ */
+export function createStyles<T extends Record<string, ZxStyle>>(
+    styles: T
+): { [K in keyof T]: string } {
+    // Runtime stub - replaced at build time by vite-plugin-style-zx
+    // This exists for:
+    // 1. TypeScript type checking
+    // 2. Fallback if code runs without the plugin (returns empty strings)
+    const result = {} as { [K in keyof T]: string };
+    for (const key in styles) {
+        result[key] = '';
+    }
+    return result;
+}

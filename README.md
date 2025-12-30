@@ -9,6 +9,7 @@
 - **Zero Runtime**: Styles are extracted to static CSS files during the build process. No runtime style injection or overhead.
 - **Ultra Lightweight**: The plugin output is tiny (~5KB), ensuring minimal impact on your build process.
 - **`zx` Prop**: Style any component directly with the `zx` prop (inspired by MUI's `sx` and other similar libraries).
+- **`createStyles`**: Define reusable static styles outside components that compile to class names.
 - **TypeScript Support**: Full type safety for CSS properties and theme variables.
 - **Theming**: Define a theme and access variables easily (e.g., `"$theme.colors.primary"`).
 - **Aliases**: Shorthand properties for common styles (e.g., `p`, `m`, `px`, `my`, `bg`).
@@ -111,6 +112,51 @@ You can use standard CSS nesting syntax.
 }}>
   Hover me <span>(Bold)</span>
 </div>
+```
+
+### createStyles
+
+For reusable styles outside components, use `createStyles`. It compiles to static class names at build time with full support for aliases and theme variables.
+
+```tsx
+import { createStyles } from 'style-zx';
+
+const styles = createStyles({
+  container: {
+    bg: '$theme.colors.background',
+    p: 20,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  title: {
+    fontSize: '2em',
+    color: '$theme.colors.primary',
+    m: 0,
+  },
+  card: {
+    bg: 'white',
+    borderRadius: 8,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    p: 16,
+  },
+});
+
+function App() {
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.title}>Hello</h1>
+      <div className={styles.card}>Content here</div>
+    </div>
+  );
+}
+```
+
+**Conditional Classes**: Use a library like `clsx` for conditional class logic:
+
+```tsx
+import clsx from 'clsx';
+
+<div className={clsx(styles.card, isActive && styles.active)} />
 ```
 
 ## Comparison & Concept

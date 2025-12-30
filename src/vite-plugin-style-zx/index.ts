@@ -39,7 +39,10 @@ function evaluateAstNode(node: t.Node): any {
 }
 
 function processFile(code: string, id: string, shouldInjectCss: boolean): { css: string, cssRules: Map<string, string>, code: string, map: any, hasZx: boolean } | null {
-    if (!code.includes('zx={')) {
+    const hasZxProp = code.includes('zx={');
+    const hasCreateStyles = code.includes('createStyles(');
+
+    if (!hasZxProp && !hasCreateStyles) {
         return null;
     }
 
@@ -98,6 +101,70 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
                         s.appendLeft(zxAttr.start!, ` className="${className}" `);
                     }
                 }
+            }
+        },
+
+        CallExpression(path: any) {
+            const callee = path.node.callee;
+
+            // Check if this is a createStyles call
+            if (!t.isIdentifier(callee) || callee.name !== 'createStyles') {
+                return;
+            }
+
+            const args = path.node.arguments;
+            if (args.length !== 1 || !t.isObjectExpression(args[0])) {
+                return;
+            }
+
+            hasZx = true;
+            const stylesArg = args[0];
+            const classNameMap: Record<string, string> = {};
+
+            // Process each property in the styles object
+            for (const prop of stylesArg.properties) {
+                if (!t.isObjectProperty(prop)) {
+                    throw new Error(`Unsupported property type in createStyles: ${prop.type}. Only object properties are allowed.`);
+                }
+
+                // Get the key name
+                let keyName: string;
+                if (t.isIdentifier(prop.key)) {
+                    keyName = prop.key.name;
+                } else if (t.isStringLiteral(prop.key)) {
+                    keyName = prop.key.value;
+                } else {
+                    throw new Error(`Unsupported key type in createStyles: ${prop.key.type}`);
+                }
+
+                // Get the style object value
+                if (!t.isObjectExpression(prop.value)) {
+                    throw new Error(`Value for "${keyName}" in createStyles must be an object.`);
+                }
+
+                let styleObj: any;
+                try {
+                    styleObj = evaluateAstNode(prop.value);
+                } catch (e: any) {
+                    throw new Error(`Error parsing style "${keyName}" in createStyles in ${id}: ${e.message}`);
+                }
+
+                // Generate class name from style content hash
+                const className = `zx-${hash(JSON.stringify(styleObj))}`;
+                classNameMap[keyName] = className;
+
+                // Only add CSS if we haven't seen this exact style before
+                if (!cssRules.has(className)) {
+                    const css = compileStyle(styleObj, className);
+                    generatedCss += css + '\n';
+                    cssRules.set(className, css);
+                }
+            }
+
+            // Replace the createStyles call with the class name map object
+            const replacement = JSON.stringify(classNameMap);
+            if (path.node.start != null && path.node.end != null) {
+                s.overwrite(path.node.start, path.node.end, replacement);
             }
         }
     });
