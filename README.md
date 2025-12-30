@@ -57,44 +57,85 @@ Use the `zx` prop on any HTML element. Numeric values for dimensions are treated
 
 ### Theming
 
-1. **Define your theme** and create the hook:
+#### Global Theme
 
-    ```typescript
-    // src/style-zx/theme.ts
-    import { createTheme } from 'style-zx';
+Define your theme using `createTheme`. It injects CSS variables into `:root` and returns the theme object for direct JS access.
 
-    export const { useTheme, theme } = createTheme({
-      colors: {
-        primary: '#007bff',
-        background: '#f0f2f5',
-        text: '#333'
-      },
-      spacing: {
-        small: 8,
-        medium: 16
-      }
-    });
-    ```
+```typescript
+// src/theme.ts
+import { createTheme } from 'style-zx';
 
-2. **Use theme variables** in your components. You can reference them as strings starting with `$theme.`.
+export const theme = createTheme({
+  colors: {
+    primary: '#007bff',
+    background: '#f0f2f5',
+    text: '#333'
+  },
+  spacing: {
+    small: 8,
+    medium: 16
+  }
+});
+```
 
-    ```tsx
-    import { useTheme } from './style-zx';
+Import the theme file early in your app (e.g., in `main.tsx`) to initialize CSS variables:
 
-    function App() {
-      const theme = useTheme();
+```tsx
+// main.tsx
+import './theme';  // Initialize theme CSS variables
+import App from './App';
+```
 
-      return (
-        <button zx={{
-          bg: '$theme.colors.primary',
-          color: 'white',
-          p: '$theme.spacing.small'
-        }}>
-          Click Me
-        </button>
-      )
-    }
-    ```
+Use theme variables in `zx` prop with `$theme.` prefix:
+
+```tsx
+<button zx={{
+  bg: '$theme.colors.primary',
+  color: 'white',
+  p: '$theme.spacing.small'
+}}>
+  Click Me
+</button>
+```
+
+#### Scoped Themes (ThemeProvider)
+
+Use `ThemeProvider` to override theme values for a section of your app. It **inherits** from the global theme and deep merges your overrides:
+
+```tsx
+import { ThemeProvider } from 'style-zx';
+
+// Only override what changes - everything else is inherited
+<ThemeProvider theme={{ colors: { primary: '#a855f7', surface: '#1e1e2e' } }}>
+  <Sidebar />  {/* Uses purple primary, inherits other colors */}
+</ThemeProvider>
+```
+
+Nested `ThemeProvider`s inherit from their parent:
+
+```tsx
+<ThemeProvider theme={{ colors: { primary: 'blue' } }}>
+  <ThemeProvider theme={{ colors: { secondary: 'green' } }}>
+    {/* Gets blue primary + green secondary + all other inherited values */}
+  </ThemeProvider>
+</ThemeProvider>
+```
+
+#### useTheme Hook
+
+Access the current theme in JavaScript with `useTheme`:
+
+```tsx
+import { useTheme } from 'style-zx';
+
+function MyComponent() {
+  const theme = useTheme();
+  return <p style={{ color: theme.colors.primary }}>Hello</p>;
+}
+```
+
+- Inside a `ThemeProvider`: returns the merged theme (parent + overrides)
+- Outside a `ThemeProvider`: returns the global theme
 
 ### Nested Selectors
 
