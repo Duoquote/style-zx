@@ -92,7 +92,7 @@ function processFile(code: string, id: string, shouldInjectCss: boolean): { css:
                             s.overwrite(classAttr.value.start, classAttr.value.end, `"${classAttr.value.value} ${className}"`);
                         } else if (t.isJSXExpressionContainer(classAttr.value) && classAttr.value.expression.start && classAttr.value.expression.end) {
                             const originalExp = code.slice(classAttr.value.expression.start, classAttr.value.expression.end);
-                            s.overwrite(classAttr.value.expression.start, classAttr.value.expression.end, `\`\${${originalExp}} ${className}\``);
+                            s.overwrite(classAttr.value.expression.start, classAttr.value.expression.end, `[${originalExp}, "${className}"].filter(Boolean).join(" ")`);
                         }
                     } else {
                         s.appendLeft(zxAttr.start!, ` className="${className}" `);
